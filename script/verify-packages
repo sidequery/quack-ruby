@@ -5,9 +5,11 @@ platforms = %w[arm64-darwin x86_64-darwin aarch64-linux-gnu x86_64-linux-gnu]
 expected = ARGV.empty? ? ["ruby", *platforms] : ARGV
 abort "unknown platform" unless (expected - ["ruby", *platforms]).empty?
 packages = Dir["pkg/*.gem"].map { |path| [path, Gem::Package.new(path)] }
-packages.select! { |_, package| expected.include?(package.spec.platform.to_s) } unless ARGV.empty?
-abort "wrong package count" unless packages.length == expected.length
-abort "wrong package platforms" unless packages.map { |_, package| package.spec.platform.to_s }.sort == expected.sort
+# Validate the declared package platform, including the Linux libc suffix.
+declared_platforms = packages.map { |path, package| [path, package.spec.platform.to_s, package.spec.original_platform.to_s] }
+packages.select! { |_, package| expected.include?(package.spec.original_platform.to_s) } unless ARGV.empty?
+abort "wrong package count: #{declared_platforms.inspect}" unless packages.length == expected.length
+abort "wrong package platforms" unless packages.map { |_, package| package.spec.original_platform.to_s }.sort == expected.sort
 
 packages.each do |path, package|
   package.verify
