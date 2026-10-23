@@ -211,10 +211,13 @@ packages all three Ruby ABIs into each platform gem, and runs the live suite
 on all twelve OS/architecture/Ruby combinations with build tools blocked.
 Release builds do not restore or publish compiler caches.
 
-To release, run `Native gems`, then dispatch `Publish RubyGems` with its
-successful run ID at the same commit. The publishing workflow verifies the
-build's commit and package contents, then uploads those exact artifacts through
-RubyGems Trusted Publishing. Source and binary gems use the same version.
+To release, dispatch `Release` from main and choose a patch, minor or major
+bump. It updates the Ruby/Rust versions and locks, commits and tags the release,
+builds all five packages, and runs the twelve installed-binary test combinations.
+Only after every check passes does it publish those exact artifacts through
+RubyGems Trusted Publishing and create a GitHub Release with the gem assets.
+An optional `release_tag` publishes an existing tag without another bump; its
+source version must match the tag. Source and binary gems use the same version.
 
 ## License
 

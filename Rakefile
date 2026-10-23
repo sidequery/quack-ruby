@@ -16,6 +16,8 @@ Rake::ExtensionTask.new("quack_native", GEMSPEC) do |extension|
     spec.dependencies.reject! { |dependency| dependency.name == "rb_sys" }
     if ENV.fetch("RUBY_TARGET").end_with?("-linux")
       spec.platform = Gem::Platform.new("#{ENV.fetch('RUBY_TARGET')}-gnu")
+      # RubyGems 3.5 retains the first assigned platform when serializing YAML.
+      spec.original_platform = spec.platform.to_s
       spec.required_rubygems_version = ">= 3.3.22"
     end
   end
