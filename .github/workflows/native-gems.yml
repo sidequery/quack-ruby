@@ -1,6 +1,11 @@
 name: Native gems
 on:
   workflow_dispatch:
+  workflow_call:
+    inputs:
+      ref:
+        type: string
+        required: true
 permissions:
   contents: read
 jobs:
@@ -8,6 +13,8 @@ jobs:
     runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v7
+        with:
+          ref: ${{ inputs.ref || github.sha }}
       - uses: ruby/setup-ruby@v1
         with:
           ruby-version: '3.3'
@@ -35,6 +42,8 @@ jobs:
             platform: x86_64-linux-gnu
     steps:
       - uses: actions/checkout@v7
+        with:
+          ref: ${{ inputs.ref || github.sha }}
       - uses: ruby/setup-ruby@v1
         with:
           ruby-version: '3.3'
@@ -44,14 +53,17 @@ jobs:
       - run: rb-sys-dock --platform "$TARGET" --ruby-versions 3.2,3.3,3.4 --build -- 'rustup update stable --no-self-update'
         env:
           TARGET: ${{ matrix.target }}
-      - run: ruby script/verify-packages "$PLATFORM"
-        env:
-          PLATFORM: ${{ matrix.platform }}
       - uses: actions/upload-artifact@v6
         with:
           name: gem-${{ matrix.platform }}
           path: pkg/*-${{ matrix.platform }}.gem
           if-no-files-found: error
+      - name: Verify package metadata and contents
+        run: |
+          ruby -rrubygems/package -rzlib -rstringio -e 'Dir["pkg/*-linux-gnu.gem"].each { |path| Gem::Package::TarReader.new(File.open(path, "rb")) { |tar| tar.each { |entry| puts Zlib::GzipReader.new(StringIO.new(entry.read)).read.lines.grep(/platform:|cpu:|os:|version:/).join if entry.full_name == "metadata.gz" } } }'
+          ruby script/verify-packages "$PLATFORM"
+        env:
+          PLATFORM: ${{ matrix.platform }}
   test:
     needs: build
     strategy:
@@ -70,6 +82,8 @@ jobs:
     runs-on: ${{ matrix.target.os }}
     steps:
       - uses: actions/checkout@v7
+        with:
+          ref: ${{ inputs.ref || github.sha }}
       - uses: ruby/setup-ruby@v1
         with:
           ruby-version: ${{ matrix.ruby }}
