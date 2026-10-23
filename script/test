@@ -1,0 +1,33 @@
+#!/usr/bin/env ruby
+require "socket"
+require "json"
+require "timeout"
+
+root = File.expand_path("..", __dir__)
+Dir.chdir(root)
+versions = ENV.fetch("DUCKDB_TEST_VERSIONS", "1.5.5 2.0.0").split
+versions.each do |version|
+  sockets = 2.times.map { TCPServer.new("127.0.0.1", 0) }
+  port, tls_port = sockets.map { |socket| socket.addr[1] }
+  sockets.each(&:close)
+  read, write = IO.pipe
+  pid = Process.spawn("uv", "run", "--with", "duckdb==#{version}", "script/quack_server.py", "--port", port.to_s, "--tls-port", tls_port.to_s, out: write)
+  write.close
+  begin
+    line = Timeout.timeout(60) { read.gets }
+    ready = line && JSON.parse(line)
+    raise "Quack server did not start: #{line.inspect}" unless ready && ready["ready"]
+    puts "Testing DuckDB #{version}"
+    env = {"QUACK_TEST_URI" => "http://127.0.0.1:#{port}", "QUACK_TEST_VERSION" => version,
+           "QUACK_TEST_TLS_URI" => nil, "QUACK_TEST_TLS_FINGERPRINT" => nil}
+    if ready["fingerprint"]
+      env.merge!("QUACK_TEST_TLS_URI" => "https://127.0.0.1:#{tls_port}", "QUACK_TEST_TLS_FINGERPRINT" => ready.fetch("fingerprint"))
+    end
+    success = system(env, "bundle", "exec", "rake", "test")
+    exit 1 unless success
+  ensure
+    Process.kill("TERM", pid) rescue Errno::ESRCH
+    Process.wait(pid)
+    read.close
+  end
+end

@@ -1,0 +1,17 @@
+[package]
+name = "quack-ruby"
+version = "0.1.0"
+edition = "2024"
+rust-version = "1.85"
+license = "MIT"
+
+[lib]
+name = "quack_native"
+crate-type = ["cdylib"]
+
+[dependencies]
+magnus = { version = "0.9", features = ["rb-sys"] }
+rb-sys = "0.9"
+quack_protocol = { version = "=0.4.1", path = "vendor/quack_protocol" }
+tokio = { version = "1", features = ["rt-multi-thread", "time", "net", "sync"] }
+futures-util = "0.3"

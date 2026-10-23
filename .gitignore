@@ -1,0 +1,11 @@
+/vendor/
+/.bundle/
+/pkg/
+**/target/
+**/Makefile
+**/mkmf.log
+**/*.bundle
+**/*.so
+**/*.o
+**/*.dSYM/
+**/*.gem
