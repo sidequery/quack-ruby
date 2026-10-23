@@ -1,0 +1,34 @@
+#!/usr/bin/env ruby
+require "rubygems/package"
+
+platforms = %w[arm64-darwin x86_64-darwin aarch64-linux-gnu x86_64-linux-gnu]
+expected = ARGV.empty? ? ["ruby", *platforms] : ARGV
+abort "unknown platform" unless (expected - ["ruby", *platforms]).empty?
+packages = Dir["pkg/*.gem"].map { |path| [path, Gem::Package.new(path)] }
+packages.select! { |_, package| expected.include?(package.spec.platform.to_s) }
+abort "wrong package count" unless packages.length == expected.length
+abort "wrong package platforms" unless packages.map { |_, package| package.spec.platform.to_s }.sort == expected.sort
+
+packages.each do |path, package|
+  package.verify
+  spec = package.spec
+  abort "wrong gem name" unless spec.name == "quack-ruby"
+  abort "wrong version" unless spec.version == Gem::Specification.load("quack-ruby.gemspec").version
+  binaries = package.contents.grep(/\.(?:bundle|so)\z/)
+  if spec.platform.to_s == "ruby"
+    abort "source gem contains binaries" unless binaries.empty?
+    abort "source gem is missing its build entry point" unless spec.extensions == ["ext/quack/extconf.rb"]
+  else
+    suffix = spec.platform.os == "darwin" ? "bundle" : "so"
+    expected_binaries = %w[3.2 3.3 3.4].map { |abi| "lib/quack/#{abi}/quack_native.#{suffix}" }
+    abort "wrong Ruby ABI binaries: #{binaries.inspect}" unless binaries.sort == expected_binaries.sort
+    abort "native gem has an install-time build" unless spec.extensions.empty?
+    abort "native gem depends on rb_sys" if spec.dependencies.any? { |dependency| dependency.name == "rb_sys" }
+    abort "native gem contains build sources" if package.contents.any? { |entry| entry.start_with?("ext/") }
+    %w[3.2.0 3.3.0 3.4.0].each do |ruby_version|
+      abort "missing supported Ruby version" unless spec.required_ruby_version.satisfied_by?(Gem::Version.new(ruby_version))
+    end
+    abort "native gem promises an unbuilt Ruby ABI" if spec.required_ruby_version.satisfied_by?(Gem::Version.new("3.5.0"))
+  end
+  puts "Verified #{path} (#{spec.platform})"
+end

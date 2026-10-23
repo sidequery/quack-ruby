@@ -23,7 +23,11 @@ versions.each do |version|
     if ready["fingerprint"]
       env.merge!("QUACK_TEST_TLS_URI" => "https://127.0.0.1:#{tls_port}", "QUACK_TEST_TLS_FINGERPRINT" => ready.fetch("fingerprint"))
     end
-    success = system(env, "bundle", "exec", "rake", "test")
+    success = if ENV["QUACK_TEST_INSTALLED"]
+      system(env, "ruby", "-Itest", "-e", 'Dir["test/**/*_test.rb"].sort.each { |path| require_relative path }')
+    else
+      system(env, "bundle", "exec", "rake", "test")
+    end
     exit 1 unless success
   ensure
     Process.kill("TERM", pid) rescue Errno::ESRCH

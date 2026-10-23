@@ -2,7 +2,15 @@ require "date"
 require "time"
 require "bigdecimal"
 require "json"
-require "quack/quack_native"
+require "rbconfig"
+
+ruby_abi = RUBY_VERSION[/\A\d+\.\d+/]
+native_extension = "quack/#{ruby_abi}/quack_native"
+if File.file?(File.join(__dir__, "#{native_extension}.#{RbConfig::CONFIG.fetch('DLEXT')}"))
+  require native_extension
+else
+  require "quack/quack_native"
+end
 require_relative "quack/types"
 require_relative "quack/logical_types"
 require_relative "quack/codec"

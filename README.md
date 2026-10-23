@@ -9,16 +9,22 @@ use [activerecord-quack-adapter](https://github.com/sidequery/activerecord-quack
 
 ## Install
 
-The gems are available from source; no RubyGems release or precompiled binaries
-have been published. Add to your Gemfile:
+Add to your Gemfile:
 
 ```ruby
-gem "quack", github: "sidequery/quack-ruby", branch: "main"
+gem "quack-ruby", "~> 0.1.0"
 ```
 
-Requires Ruby >= 3.2, Rust >= 1.85, a C toolchain, Ruby development headers and
-libclang. Bundler compiles the native extension when installing from Git.
-To cache installation builds from another application, enable Boxington’s Cargo shim with `mbx setup`.
+Precompiled gems cover Ruby 3.2, 3.3 and 3.4 on macOS (Apple Silicon and Intel)
+and Linux glibc (ARM64 and x86-64). Bundler selects the matching platform gem;
+the Quack extension installs without running Cargo or a compiler. The package
+is named `quack-ruby`; its Ruby entry point remains `require "quack"`.
+
+Linux binaries target glibc, not Alpine/musl. A source gem is also available
+for other platforms and Ruby versions. Building that extension requires Rust,
+a C toolchain, Ruby development headers and libclang. Installing directly from
+Git also builds from source. To select the source package explicitly, use
+`gem install quack-ruby --platform ruby`.
 
 For a checkout:
 
@@ -199,8 +205,16 @@ ordering and rejection of invalid values before any batch is written. VARIANT
 leaf families also run through SQL and native v1 append. Tests distinguish
 server-version restrictions from client support.
 
-CI is configured for Linux/macOS and Ruby 3.2, 3.3 and 3.4 using Boxington.
-Source gems build at installation time. No publication/release job is enabled.
+Development CI covers Linux/macOS and Ruby 3.2, 3.3 and 3.4 using Boxington.
+The `Native gems` workflow builds fresh release binaries with rb-sys-dock,
+packages all three Ruby ABIs into each platform gem, and runs the live suite
+on all twelve OS/architecture/Ruby combinations with build tools blocked.
+Release builds do not restore or publish compiler caches.
+
+To release, run `Native gems`, then dispatch `Publish RubyGems` with its
+successful run ID at the same commit. The publishing workflow verifies the
+build's commit and package contents, then uploads those exact artifacts through
+RubyGems Trusted Publishing. Source and binary gems use the same version.
 
 ## License
 

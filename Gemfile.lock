@@ -1,7 +1,7 @@
 PATH
   remote: .
   specs:
-    quack (0.1.0)
+    quack-ruby (0.1.0)
       bigdecimal (>= 3.1)
       json (>= 2.6)
       rb_sys (~> 0.9)
@@ -13,6 +13,8 @@ GEM
     json (3.1.0)
     minitest (5.27.0)
     rake (13.4.2)
+    rake-compiler (1.3.2)
+      rake
     rake-compiler-dock (1.12.0)
     rb_sys (0.9.130)
       rake-compiler-dock (= 1.12.0)
@@ -27,8 +29,9 @@ PLATFORMS
 
 DEPENDENCIES
   minitest (~> 5.25)
-  quack!
+  quack-ruby!
   rake (~> 13.0)
+  rake-compiler (~> 1.3)
 
 BUNDLED WITH
    2.6.9

@@ -1,0 +1,48 @@
+name: Publish RubyGems
+on:
+  workflow_dispatch:
+    inputs:
+      build_run_id:
+        description: Successful Native gems run for this exact commit
+        type: string
+        required: true
+permissions:
+  contents: read
+  actions: read
+jobs:
+  publish:
+    runs-on: ubuntu-24.04
+    environment: release
+    permissions:
+      contents: read
+      actions: read
+      id-token: write
+    steps:
+      - uses: actions/checkout@v7
+      - uses: ruby/setup-ruby@v1
+        with:
+          ruby-version: '3.3'
+      - name: Check tested build provenance
+        env:
+          GH_TOKEN: ${{ github.token }}
+          BUILD_RUN_ID: ${{ inputs.build_run_id }}
+        run: |
+          [[ "$BUILD_RUN_ID" =~ ^[0-9]+$ ]]
+          gh api "repos/$GITHUB_REPOSITORY/actions/runs/$BUILD_RUN_ID" > build-run.json
+          ruby -rjson -e '
+            run = JSON.parse(File.read("build-run.json"))
+            abort "build is not successful" unless run["conclusion"] == "success" && run["status"] == "completed"
+            abort "wrong workflow" unless run["path"] == ".github/workflows/native-gems.yml"
+            abort "build commit differs from release" unless run["head_sha"] == ENV.fetch("GITHUB_SHA")
+          '
+          gh run download "$BUILD_RUN_ID" --repo "$GITHUB_REPOSITORY" --pattern 'gem-*' --dir artifacts
+          mkdir pkg
+          find artifacts -name '*.gem' -exec cp '{}' pkg/ \;
+          ruby script/verify-packages
+      - uses: rubygems/configure-rubygems-credentials@dc5a8d8553e6ee01fc26761a49e99e733d17954a # v2.1.0
+      - name: Publish tested native gems, then source fallback
+        run: |
+          for package in pkg/*-darwin.gem pkg/*-linux-gnu.gem; do
+            gem push "$package"
+          done
+          gem push "$(ruby -e 'print "pkg/quack-ruby-#{Gem::Specification.load("quack-ruby.gemspec").version}.gem"')"

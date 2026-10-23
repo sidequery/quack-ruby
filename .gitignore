@@ -1,6 +1,7 @@
 /vendor/
 /.bundle/
 /pkg/
+/tmp/
 **/target/
 **/Makefile
 **/mkmf.log

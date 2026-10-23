@@ -1,6 +1,14 @@
 require "minitest/autorun"
 require "quack"
 
+if ENV["QUACK_TEST_INSTALLED"]
+  spec = Gem.loaded_specs.fetch("quack-ruby")
+  raise "expected an installed native gem" if spec.platform.to_s == "ruby"
+  ruby_abi = RUBY_VERSION[/\A\d+\.\d+/]
+  extension = File.join(spec.full_gem_path, "lib/quack/#{ruby_abi}/quack_native")
+  raise "native extension was not loaded from the installed gem" unless $LOADED_FEATURES.any? { |path| path.start_with?("#{extension}.") }
+end
+
 module LiveConnection
   def setup
     super

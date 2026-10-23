@@ -1,0 +1,14 @@
+#!/bin/sh
+set -eu
+block_dir="$(mktemp -d)"
+trap 'rm -rf "$block_dir"' EXIT HUP INT TERM
+for tool in cargo rustc cc gcc clang c++ g++ clang++; do
+  cat > "$block_dir/$tool" <<'BLOCK'
+#!/bin/sh
+echo "Unexpected build tool invocation: $0" >&2
+exit 1
+BLOCK
+  chmod +x "$block_dir/$tool"
+done
+export PATH="$block_dir:$PATH"
+"$@"

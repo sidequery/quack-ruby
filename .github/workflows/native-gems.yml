@@ -1,0 +1,84 @@
+name: Native gems
+on:
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  source:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v7
+      - uses: ruby/setup-ruby@v1
+        with:
+          ruby-version: '3.3'
+      - run: bundle install
+      - run: bundle exec rake package
+      - run: ruby script/verify-packages ruby
+      - uses: actions/upload-artifact@v6
+        with:
+          name: gem-ruby
+          path: pkg/*.gem
+          if-no-files-found: error
+  build:
+    runs-on: ubuntu-24.04
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - target: arm64-darwin
+            platform: arm64-darwin
+          - target: x86_64-darwin
+            platform: x86_64-darwin
+          - target: aarch64-linux
+            platform: aarch64-linux-gnu
+          - target: x86_64-linux
+            platform: x86_64-linux-gnu
+    steps:
+      - uses: actions/checkout@v7
+      - uses: ruby/setup-ruby@v1
+        with:
+          ruby-version: '3.3'
+      - run: gem install rb_sys -v 0.9.130 --no-document
+      # Fresh hosted runners and no compiler-cache restore/save for release builds.
+      - run: rb-sys-dock --platform "$TARGET" --ruby-versions 3.2,3.3,3.4 --build -- 'rustup update stable --no-self-update'
+        env:
+          TARGET: ${{ matrix.target }}
+      - run: ruby script/verify-packages "$PLATFORM"
+        env:
+          PLATFORM: ${{ matrix.platform }}
+      - uses: actions/upload-artifact@v6
+        with:
+          name: gem-${{ matrix.platform }}
+          path: pkg/*-${{ matrix.platform }}.gem
+          if-no-files-found: error
+  test:
+    needs: build
+    strategy:
+      fail-fast: false
+      matrix:
+        ruby: ['3.2', '3.3', '3.4']
+        target:
+          - platform: arm64-darwin
+            os: macos-15
+          - platform: x86_64-darwin
+            os: macos-15-intel
+          - platform: aarch64-linux-gnu
+            os: ubuntu-24.04-arm
+          - platform: x86_64-linux-gnu
+            os: ubuntu-24.04
+    runs-on: ${{ matrix.target.os }}
+    steps:
+      - uses: actions/checkout@v7
+      - uses: ruby/setup-ruby@v1
+        with:
+          ruby-version: ${{ matrix.ruby }}
+      - uses: astral-sh/setup-uv@v10.3.2
+      - uses: actions/download-artifact@v7
+        with:
+          name: gem-${{ matrix.target.platform }}
+          path: pkg
+      - run: gem install minitest -v '~> 5.25' --no-document
+      - run: script/without-build-tools gem install pkg/*.gem --local --ignore-dependencies --no-document
+      - run: script/without-build-tools script/test
+        env:
+          QUACK_TEST_INSTALLED: '1'
