@@ -1,0 +1,4 @@
+#!/bin/sh
+# rb-sys selects its command through CARGO; mbx expects CARGO to name Cargo.
+unset CARGO
+exec mbx "$@"

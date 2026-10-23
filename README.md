@@ -18,13 +18,13 @@ gem "quack", github: "sidequery/quack-ruby", branch: "main"
 
 Requires Ruby >= 3.2, Rust >= 1.85, a C toolchain, Ruby development headers and
 libclang. Bundler compiles the native extension when installing from Git.
-With Boxington installed, use `CARGO=mbx bundle install`.
+To cache installation builds from another application, enable Boxington’s Cargo shim with `mbx setup`.
 
 For a checkout:
 
 ```sh
 bundle install
-CARGO=mbx bundle exec rake compile
+CARGO="$PWD/script/cached-cargo" bundle exec rake compile
 ```
 
 A Quack server must already be running. Provision databases on that server.
@@ -177,7 +177,7 @@ is required.
 ## Development
 
 ```sh
-CARGO=mbx bundle exec rake compile
+CARGO="$PWD/script/cached-cargo" bundle exec rake compile
 script/test
 cargo fmt --manifest-path ext/quack/Cargo.toml --check
 cargo fmt --manifest-path ext/quack/vendor/quack_protocol/Cargo.toml --check
