@@ -39,6 +39,7 @@ jobs:
         with:
           ruby-version: '3.3'
       - run: gem install rb_sys -v 0.9.130 --no-document
+      - run: mkdir -p "${CARGO_HOME:-$HOME/.cargo}/registry"
       # Fresh hosted runners and no compiler-cache restore/save for release builds.
       - run: rb-sys-dock --platform "$TARGET" --ruby-versions 3.2,3.3,3.4 --build -- 'rustup update stable --no-self-update'
         env:

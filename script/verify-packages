@@ -5,7 +5,7 @@ platforms = %w[arm64-darwin x86_64-darwin aarch64-linux-gnu x86_64-linux-gnu]
 expected = ARGV.empty? ? ["ruby", *platforms] : ARGV
 abort "unknown platform" unless (expected - ["ruby", *platforms]).empty?
 packages = Dir["pkg/*.gem"].map { |path| [path, Gem::Package.new(path)] }
-packages.select! { |_, package| expected.include?(package.spec.platform.to_s) }
+packages.select! { |_, package| expected.include?(package.spec.platform.to_s) } unless ARGV.empty?
 abort "wrong package count" unless packages.length == expected.length
 abort "wrong package platforms" unless packages.map { |_, package| package.spec.platform.to_s }.sort == expected.sort
 
@@ -14,6 +14,9 @@ packages.each do |path, package|
   spec = package.spec
   abort "wrong gem name" unless spec.name == "quack-ruby"
   abort "wrong version" unless spec.version == Gem::Specification.load("quack-ruby.gemspec").version
+  %w[LICENSE LICENSE-DuckDB LICENSE-QuackProtocol LICENSE-Rust-dependencies.json].each do |license|
+    abort "missing #{license}" unless package.contents.include?(license)
+  end
   binaries = package.contents.grep(/\.(?:bundle|so)\z/)
   if spec.platform.to_s == "ruby"
     abort "source gem contains binaries" unless binaries.empty?
