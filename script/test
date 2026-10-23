@@ -11,7 +11,7 @@ versions.each do |version|
   port, tls_port = sockets.map { |socket| socket.addr[1] }
   sockets.each(&:close)
   read, write = IO.pipe
-  pid = Process.spawn("uv", "run", "--with", "duckdb==#{version}", "script/quack_server.py", "--port", port.to_s, "--tls-port", tls_port.to_s, out: write)
+  pid = Process.spawn("uv", "run", "--python", "3.12", "--no-build", "--with", "duckdb==#{version}", "script/quack_server.py", "--port", port.to_s, "--tls-port", tls_port.to_s, out: write)
   write.close
   begin
     line = Timeout.timeout(60) { read.gets }
