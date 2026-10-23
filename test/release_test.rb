@@ -12,13 +12,17 @@ class ReleaseTest < Minitest::Test
     @checkout = File.join(@directory, "checkout")
     @remote = File.join(@directory, "remote.git")
     FileUtils.mkdir_p(@checkout)
-    paths = Dir.chdir(ROOT) { Dir["*.gemspec", "**/Gemfile*.lock"] }
+    paths = Dir.chdir(ROOT) { Dir["*.gemspec", "Gemfile.lock", "gemfiles/*.lock"] }
     paths.concat(%w[lib/quack.rb ext/quack/Cargo.toml ext/quack/Cargo.lock]) if File.file?(File.join(ROOT, "quack-ruby.gemspec"))
     paths.each do |path|
       target = File.join(@checkout, path)
       FileUtils.mkdir_p(File.dirname(target))
       FileUtils.cp(File.join(ROOT, path), target)
     end
+    @dependency_lock = File.join(@checkout, "vendor/bundle/dependency/Gemfile.lock")
+    FileUtils.mkdir_p(File.dirname(@dependency_lock))
+    File.write(@dependency_lock, "    cached-dependency (9.9.9)\n")
+    File.write(File.join(@checkout, ".gitignore"), "/vendor/\n")
     command("git", "init", "--bare", @remote)
     command("git", "init", "-b", "main")
     command("git", "config", "user.name", "Release test")
@@ -55,9 +59,10 @@ class ReleaseTest < Minitest::Test
       assert status.success?, output
       spec = Gem::Specification.load(Dir[File.join(@checkout, "*.gemspec")].fetch(0))
       assert_equal version, spec.version.to_s
-      Dir[File.join(@checkout, "**/Gemfile*.lock")].each do |lock|
+      Dir[File.join(@checkout, "Gemfile.lock"), File.join(@checkout, "gemfiles/*.lock")].each do |lock|
         assert_includes File.read(lock), "    #{spec.name} (#{version})"
       end
+      assert_equal "    cached-dependency (9.9.9)\n", File.read(@dependency_lock)
       if spec.name == "quack-ruby"
         assert_includes File.read(File.join(@checkout, "lib/quack.rb")), "VERSION = \"#{version}\""
         assert_includes File.read(File.join(@checkout, "ext/quack/Cargo.toml")), "version = \"#{version}\""

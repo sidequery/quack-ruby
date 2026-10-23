@@ -20,7 +20,7 @@ if tag.empty?
   version = parts.join(".")
   tag = "v#{version}"
   changes = {gemspec => [/spec\.version = "#{Regexp.escape(current)}"/, "spec.version = \"#{version}\""]}
-  Dir["**/Gemfile*.lock"].each do |path|
+  Dir["Gemfile.lock", "gemfiles/*.lock"].each do |path|
     changes[path] = [/^(    #{Regexp.escape(spec.name)} \()#{Regexp.escape(current)}(\))$/, "\\1#{version}\\2"]
   end
   if spec.name == "quack-ruby"
